@@ -1,0 +1,49 @@
+services:
+  mongodb:
+    image: mongo:7.0.11
+    container_name: mongodb
+    command: mongod --quiet
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_DATABASE=test
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+    volumes:
+      - mongodb_data:/data
+    networks:
+      - mongo_net
+  db_service:
+    build: db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+      - MONGO_URI=mongodb://172.17.0.1:27017 # локальный ip docker
+      - DB_NAME=smpp
+    command: python3 ./main.py
+    container_name: db_service
+    ports:
+      - 5000:5000
+    # depends_on: 
+    #   - mongodb
+    networks:
+      - mongo_net
+  smpp_core:
+    build: smpp_core/
+    command: python3 ./smpy.py
+    container_name: smpp_core
+    depends_on:
+      - db_service
+    environment:
+      - TEST_RUN=True
+    ports:
+      - 2773:2773
+    volumes:
+      - ./logs:/smpp_core/logs
+
+volumes:
+  mongodb_data:
+
+networks:
+  mongo_net:
+    driver: host
